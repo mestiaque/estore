@@ -9,6 +9,7 @@ use ME\Retail\Models\Product;
 use ME\Retail\Models\ProductStock;
 use ME\Retail\Models\StockLedger;
 use ME\Retail\Models\Warehouse;
+use ME\Retail\Support\RetailSettings;
 
 /**
  * The single authorized way stock is ever mutated. Every write goes through
@@ -40,7 +41,7 @@ class StockService
             $before = $summary ? (float) $summary->quantity : 0.0;
             $after  = $before + $quantity;
 
-            if ($after < 0 && !config('retail.allow_negative_stock', false)) {
+            if ($after < 0 && !RetailSettings::get('allow_negative_stock')) {
                 throw InsufficientStockException::forProduct($product->name, $warehouse->name, abs($quantity), $before);
             }
 

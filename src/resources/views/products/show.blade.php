@@ -3,6 +3,7 @@
 @section('title', trans('Product Details'))
 
 @push('buttons')
+  @feature('barcode')
   @can('retail_barcode.generate')
     @if(!$product->barcode)
     <form action="{{ route('retail.products.barcode.generate', $product->id) }}" method="POST" class="d-inline">
@@ -13,6 +14,8 @@
     </form>
     @endif
   @endcan
+  @endfeature
+  @feature('variants')
   @can('retail_product.edit')
     @if(!$product->isVariant())
     @component('me::components.btn.add-button', [
@@ -23,6 +26,7 @@
     @endcomponent
     @endif
   @endcan
+  @endfeature
 @endpush
 
 @section('content')

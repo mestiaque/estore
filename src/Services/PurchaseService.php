@@ -38,7 +38,7 @@ class PurchaseService
      *   supplier_id:int, store_id:int, warehouse_id:int, purchase_date:string,
      *   reference_number?:string, discount?:float, tax?:float, paid_amount?:float,
      *   payment_method?:string, notes?:string,
-     *   items: array<int, array{product_id:int, unit_id:int, quantity:float, purchase_price:float, discount?:float, tax?:float, warranty_months?:int}>
+     *   items: array<int, array{product_id:int, unit_id:int, quantity:float, purchase_price:float, discount?:float, tax?:float, batch_number?:string, batch_barcode?:string, expiry_date?:string, serial_numbers?:string[], warranty_months?:int}>
      * } $data
      */
     public function create(array $data, ?int $userId): Purchase
@@ -99,6 +99,7 @@ class PurchaseService
                     'tax'            => $tax,
                     'total'          => $total,
                     'batch_number'   => $item['batch_number'] ?? null,
+                    'batch_barcode'  => $item['batch_barcode'] ?? null,
                     'expiry_date'    => $item['expiry_date'] ?? null,
                     'serial_numbers' => $serialNumbers ?? [],
                     'warranty_months' => !empty($item['warranty_months']) ? (int) $item['warranty_months'] : null,
@@ -159,7 +160,8 @@ class PurchaseService
                         $warehouse,
                         $row['batch_number'],
                         $row['expiry_date'],
-                        $row['cost_per_base']
+                        $row['cost_per_base'],
+                        $row['batch_barcode']
                     );
                     $this->batchService->increment($batch, $row['quantity_base']);
                     $purchaseItem->update(['batch_id' => $batch->id]);

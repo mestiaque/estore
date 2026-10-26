@@ -7,6 +7,7 @@ use ME\Retail\Enums\DiscountRuleType;
 use ME\Retail\Models\Customer;
 use ME\Retail\Models\DiscountRule;
 use ME\Retail\Models\Product;
+use ME\Retail\Support\RetailModules;
 
 /**
  * Centralized pricing/discount resolution (plan §67) — POS/Sale asks this
@@ -23,6 +24,10 @@ class PricingService
      */
     public function itemDiscount(Product $product, float $quantity, float $lineBase): array
     {
+        if (!RetailModules::discountEnabled()) {
+            return ['amount' => 0.0, 'rule' => null];
+        }
+
         $rules = DiscountRule::query()
             ->where(function ($q) use ($product, $quantity) {
                 $q->where(fn ($q2) => $q2->where('type', DiscountRuleType::Product)->where('target_id', $product->id))
@@ -65,11 +70,11 @@ class PricingService
         $amount = 0.0;
 
         if ($customer) {
-            if ($customer->hasActiveMembership() && $customer->membership) {
+            if (RetailModules::enabled('membership') && $customer->hasActiveMembership() && $customer->membership) {
                 $amount += $subtotal * ((float) $customer->membership->discount_percent / 100);
             }
 
-            if ($customer->level) {
+            if (RetailModules::loyaltyEnabled() && $customer->level) {
                 $amount += $subtotal * ((float) $customer->level->discount_percent / 100);
             }
         }
@@ -77,6 +82,10 @@ class PricingService
         $couponRule = null;
 
         if ($couponCode) {
+            if (!RetailModules::discountEnabled()) {
+                throw new InvalidArgumentException('Coupons are turned off in Retail settings.');
+            }
+
             $couponRule = DiscountRule::query()
                 ->where('type', DiscountRuleType::Coupon)
                 ->where('coupon_code', $couponCode)

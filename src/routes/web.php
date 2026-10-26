@@ -6,6 +6,7 @@ use ME\Retail\Http\Controllers\AttributeController;
 use ME\Retail\Http\Controllers\AttributeValueController;
 use ME\Retail\Http\Controllers\BarcodeController;
 use ME\Retail\Http\Controllers\BrandController;
+use ME\Retail\Http\Controllers\BusinessTypePresetController;
 use ME\Retail\Http\Controllers\CashRegisterController;
 use ME\Retail\Http\Controllers\CashRegisterSessionController;
 use ME\Retail\Http\Controllers\CategoryController;
@@ -17,6 +18,7 @@ use ME\Retail\Http\Controllers\EmiInstallmentController;
 use ME\Retail\Http\Controllers\EmiPlanController;
 use ME\Retail\Http\Controllers\ExpenseCategoryController;
 use ME\Retail\Http\Controllers\ExpenseController;
+use ME\Retail\Http\Controllers\HeldSaleController;
 use ME\Retail\Http\Controllers\InvoiceController;
 use ME\Retail\Http\Controllers\LoyaltyAdjustmentController;
 use ME\Retail\Http\Controllers\MembershipController;
@@ -39,7 +41,7 @@ use ME\Retail\Http\Controllers\CustomerController;
 use ME\Retail\Http\Controllers\UnitController;
 use ME\Retail\Http\Controllers\WarehouseController;
 
-Route::group(['prefix' => 'retail', 'as' => 'retail.', 'middleware' => ['web', 'auth', LocaleMiddleware::class]], function () {
+Route::group(['prefix' => 'retail', 'as' => 'retail.', 'middleware' => ['web', 'auth', LocaleMiddleware::class, 'retail.feature']], function () {
     Route::get('/', [RetailController::class, 'index'])->name('index');
 
     Route::resource('stores', StoreController::class);
@@ -51,6 +53,7 @@ Route::group(['prefix' => 'retail', 'as' => 'retail.', 'middleware' => ['web', '
     Route::post('products/barcode/bulk-generate', [BarcodeController::class, 'bulkGenerate'])->name('products.barcode.bulk-generate');
     Route::get('barcode-labels', [BarcodeController::class, 'labelForm'])->name('barcode-labels.form');
     Route::post('barcode-labels/print', [BarcodeController::class, 'labelPrint'])->name('barcode-labels.print');
+    Route::get('barcode-lookup', [BarcodeController::class, 'lookup'])->name('barcode.lookup');
 
     Route::get('products/{product}/variants/attributes', [ProductVariantController::class, 'attributesForm'])->name('products.variants.attributes-form');
     Route::post('products/{product}/variants/attributes', [ProductVariantController::class, 'attributesStore'])->name('products.variants.attributes-store');
@@ -82,6 +85,10 @@ Route::group(['prefix' => 'retail', 'as' => 'retail.', 'middleware' => ['web', '
     Route::get('purchases/{purchase}/invoice', [InvoiceController::class, 'purchase'])->name('purchases.invoice');
 
     Route::resource('customers', CustomerController::class);
+
+    // Parked POS carts — resumed on retail.sales.create?resume={id}.
+    Route::post('sales/hold', [HeldSaleController::class, 'store'])->name('sales.hold');
+    Route::delete('held-sales/{heldSale}', [HeldSaleController::class, 'destroy'])->name('held-sales.destroy');
 
     // Sales are immutable once completed — corrections happen via Sale Return, not edit/delete.
     Route::resource('sales', SaleController::class)->only(['index', 'create', 'store', 'show']);
@@ -121,6 +128,17 @@ Route::group(['prefix' => 'retail', 'as' => 'retail.', 'middleware' => ['web', '
         Route::put('loyalty', [RetailSettingController::class, 'update'])->name('loyalty.update');
         Route::get('modules', [RetailSettingController::class, 'modules'])->name('modules.edit');
         Route::put('modules', [RetailSettingController::class, 'updateModules'])->name('modules.update');
+        Route::get('business-type', [RetailSettingController::class, 'businessType'])->name('business-type.edit');
+        Route::put('business-type', [RetailSettingController::class, 'updateBusinessType'])->name('business-type.update');
+        Route::get('general', [RetailSettingController::class, 'general'])->name('general.edit');
+        Route::put('general', [RetailSettingController::class, 'updateGeneral'])->name('general.update');
+
+        Route::get('business-types/create', [BusinessTypePresetController::class, 'create'])->name('business-types.create');
+        Route::post('business-types', [BusinessTypePresetController::class, 'store'])->name('business-types.store');
+        Route::post('business-types/reset', [BusinessTypePresetController::class, 'reset'])->name('business-types.reset');
+        Route::get('business-types/{type}/edit', [BusinessTypePresetController::class, 'edit'])->name('business-types.edit');
+        Route::put('business-types/{type}', [BusinessTypePresetController::class, 'update'])->name('business-types.update');
+        Route::delete('business-types/{type}', [BusinessTypePresetController::class, 'destroy'])->name('business-types.destroy');
     });
 
     Route::prefix('reports')->as('reports.')->group(function () {

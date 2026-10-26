@@ -13,13 +13,13 @@ class ModuleSettingsTest extends TestCase
     {
         $response = $this->actingAs($this->admin())->get(route('retail.settings.modules.edit'));
         $response->assertOk();
-        $response->assertSee('enable_discount', false);
-        $response->assertSee('enable_loyalty', false);
-        $response->assertSee('enable_emi', false);
+        foreach (array_keys(config('retail_features.features')) as $feature) {
+            $response->assertSee('name="features[' . $feature . ']"', false);
+        }
 
-        // Submitting with only "enable_discount" checked turns the other two off.
+        // Submitting with only "discount" checked turns every other feature off.
         $update = $this->actingAs($this->admin())->put(route('retail.settings.modules.update'), [
-            'enable_discount' => '1',
+            'features' => ['discount' => '1'],
         ]);
         $update->assertRedirect(route('retail.settings.modules.edit'));
 

@@ -87,7 +87,8 @@ class StockTransferService
                         $toWarehouse,
                         $sourceBatch->batch_number,
                         $sourceBatch->expiry_date?->toDateString(),
-                        (float) $sourceBatch->purchase_price
+                        (float) $sourceBatch->purchase_price,
+                        $sourceBatch->barcode
                     );
                     $this->batchService->increment($destinationBatch, $quantityBase);
                 }

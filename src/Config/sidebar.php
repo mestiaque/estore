@@ -2,6 +2,22 @@
 
 return [
     [
+        'title'      => 'Dashboard',
+        'icon'       => 'fas fa-tachometer-alt',
+        'icon_color' => 'icc-1',
+        'route'      => 'retail.index',
+        'sl'         => 1,
+    ],
+    [
+        'title'      => 'POS',
+        'icon'       => 'fas fa-cash-register',
+        'icon_color' => 'icc-2',
+        'route'      => 'retail.sales.create',
+        'for_active' => 'retail.sales.create',
+        'permit'     => 'retail_sale.create',
+        'sl'         => 2,
+    ],
+    [
         'title'      => 'Master Data',
         'icon'       => 'fas fa-database',
         'icon_color' => 'icc-1',
@@ -344,7 +360,15 @@ return [
         'sl'         => 58,
         'children'   => [
             [
-                'title'      => 'Module Settings',
+                'title'      => 'Business Type',
+                'icon'       => 'fas fa-store',
+                'icon_color' => 'text-dark',
+                'route'      => 'retail.settings.business-type.edit',
+                'for_active' => 'retail.settings.business-type*',
+                'permit'     => 'retail_setting.view',
+            ],
+            [
+                'title'      => 'Features',
                 'icon'       => 'fas fa-toggle-on',
                 'icon_color' => 'text-dark',
                 'route'      => 'retail.settings.modules.edit',
@@ -352,11 +376,11 @@ return [
                 'permit'     => 'retail_setting.view',
             ],
             [
-                'title'      => 'Loyalty Settings',
-                'icon'       => 'fas fa-cog',
+                'title'      => 'Retail Settings',
+                'icon'       => 'fas fa-sliders-h',
                 'icon_color' => 'text-dark',
-                'route'      => 'retail.settings.loyalty.edit',
-                'for_active' => 'retail.settings.loyalty.*',
+                'route'      => 'retail.settings.general.edit',
+                'for_active' => 'retail.settings.general.*',
                 'permit'     => 'retail_setting.view',
             ],
         ],

@@ -29,6 +29,7 @@
         <label class="form-label">@lang('Credit Limit')</label>
         <input type="number" step="0.01" name="credit_limit" class="form-control" value="{{ old('credit_limit', $customer->credit_limit ?? '') }}">
     </div>
+    @feature('membership')
     <div class="col-md-6 mb-3">
         <label class="form-label">@lang('Membership')</label>
         <select name="membership_id" class="form-control">
@@ -44,6 +45,10 @@
         <label class="form-label">@lang('Membership Expires At')</label>
         <input type="date" name="membership_expires_at" class="form-control" value="{{ old('membership_expires_at', optional($customer->membership_expires_at ?? null)->format('Y-m-d')) }}">
     </div>
+    @else
+        <input type="hidden" name="membership_id" value="{{ $customer->membership_id ?? '' }}">
+        <input type="hidden" name="membership_expires_at" value="{{ optional($customer->membership_expires_at ?? null)->format('Y-m-d') }}">
+    @endfeature
     <div class="col-md-12 mb-3">
         <label class="form-label">@lang('Notes')</label>
         <textarea name="notes" class="form-control">{{ old('notes', $customer->notes ?? '') }}</textarea>

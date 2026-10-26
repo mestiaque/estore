@@ -3,27 +3,18 @@
 @section('title', trans('Sale Details'))
 
 @push('buttons')
+  {{-- Only the invoice formats switched on in Retail Settings are offered. --}}
+  @foreach(['a4' => __('A4 Invoice'), 'thermal80' => __('80mm Receipt'), 'thermal58' => __('58mm Receipt')] as $invoiceType => $invoiceLabel)
+  @continue(!in_array($invoiceType, \ME\Retail\Support\RetailSettings::get('invoice_types') ?: ['a4'], true))
   @component('me::components.btn.add-button', [
-      'route' => route('retail.sales.invoice', ['sale' => $sale->id, 'type' => 'a4']),
-      'text' => __('A4 Invoice'),
+      'route' => route('retail.sales.invoice', ['sale' => $sale->id, 'type' => $invoiceType]),
+      'text' => $invoiceLabel,
       'class' => 'btn-encodex-print2',
       'attribute' => 'target="_blank"'
   ])
   @endcomponent
-  @component('me::components.btn.add-button', [
-      'route' => route('retail.sales.invoice', ['sale' => $sale->id, 'type' => 'thermal80']),
-      'text' => __('80mm Receipt'),
-      'class' => 'btn-encodex-print2',
-      'attribute' => 'target="_blank"'
-  ])
-  @endcomponent
-  @component('me::components.btn.add-button', [
-      'route' => route('retail.sales.invoice', ['sale' => $sale->id, 'type' => 'thermal58']),
-      'text' => __('58mm Receipt'),
-      'class' => 'btn-encodex-print2',
-      'attribute' => 'target="_blank"'
-  ])
-  @endcomponent
+  @endforeach
+  @feature('sale_return')
   @can('retail_sale.return')
   @component('me::components.btn.add-button', [
       'route' => route('retail.sales.returns.create', $sale->id),
@@ -32,6 +23,8 @@
   ])
   @endcomponent
   @endcan
+  @endfeature
+  @feature('emi')
   @can('retail_emi.create')
     @if($sale->emiContract)
     @component('me::components.btn.add-button', [
@@ -49,6 +42,7 @@
     @endcomponent
     @endif
   @endcan
+  @endfeature
 @endpush
 
 @section('content')
@@ -95,7 +89,7 @@
                             @elseif($item->serials->isNotEmpty())
                                 @foreach($item->serials as $serial)
                                     <span class="badge bg-secondary">{{ $serial->serial_number }}</span>
-                                    @if($serial->warranty_end)
+                                    @if($serial->warranty_end && \ME\Retail\Support\RetailModules::enabled('warranty'))
                                         <br><small class="text-muted">@lang('Warranty until'): {{ $serial->warranty_end->format('d M Y') }}</small>
                                     @endif
                                 @endforeach

@@ -9,6 +9,7 @@ use ME\Retail\Models\Brand;
 use ME\Retail\Models\Category;
 use ME\Retail\Models\Product;
 use ME\Retail\Models\Unit;
+use ME\Retail\Services\BusinessTypeService;
 
 class ProductController extends Controller
 {
@@ -26,12 +27,14 @@ class ProductController extends Controller
         return view('retail::products.index', compact('products'));
     }
 
-    public function create()
+    public function create(BusinessTypeService $businessTypes)
     {
         $categories = Category::where('status', true)->get();
         $brands     = Brand::where('status', true)->get();
         $units      = Unit::where('status', true)->get();
-        return view('retail::products.create', compact('categories', 'brands', 'units'));
+        // Tracking type / expiry pre-selected from the shop's business-type preset.
+        $productDefaults = $businessTypes->productDefaults();
+        return view('retail::products.create', compact('categories', 'brands', 'units', 'productDefaults'));
     }
 
     public function store(Request $request)
@@ -42,7 +45,8 @@ class ProductController extends Controller
             'unit_id'          => 'required|exists:retail_units,id',
             'name'             => 'required|string|max:255',
             'sku'              => 'required|string|max:100|unique:retail_products,sku',
-            'barcode'          => 'nullable|string|max:100|unique:retail_products,barcode',
+            'barcode'          => 'nullable|string|max:100|unique:retail_products,barcode|unique:retail_batches,barcode',
+            'plu_code'         => 'nullable|string|max:20|unique:retail_products,plu_code',
             'purchase_price'   => 'required|numeric|min:0',
             'sale_price'       => 'required|numeric|min:0',
             'wholesale_price'  => 'nullable|numeric|min:0',
@@ -62,6 +66,7 @@ class ProductController extends Controller
                 'name'            => $request->name,
                 'sku'             => $request->sku,
                 'barcode'         => $request->barcode,
+                'plu_code'        => $request->plu_code,
                 'purchase_price'  => $request->purchase_price,
                 'sale_price'      => $request->sale_price,
                 'wholesale_price' => $request->wholesale_price,
@@ -102,7 +107,8 @@ class ProductController extends Controller
             'unit_id'          => 'required|exists:retail_units,id',
             'name'             => 'required|string|max:255',
             'sku'              => 'required|string|max:100|unique:retail_products,sku,' . $product->id,
-            'barcode'          => 'nullable|string|max:100|unique:retail_products,barcode,' . $product->id,
+            'barcode'          => 'nullable|string|max:100|unique:retail_products,barcode,' . $product->id . '|unique:retail_batches,barcode',
+            'plu_code'         => 'nullable|string|max:20|unique:retail_products,plu_code,' . $product->id,
             'purchase_price'   => 'required|numeric|min:0',
             'sale_price'       => 'required|numeric|min:0',
             'wholesale_price'  => 'nullable|numeric|min:0',
@@ -122,6 +128,7 @@ class ProductController extends Controller
                 'name'            => $request->name,
                 'sku'             => $request->sku,
                 'barcode'         => $request->barcode,
+                'plu_code'        => $request->plu_code,
                 'purchase_price'  => $request->purchase_price,
                 'sale_price'      => $request->sale_price,
                 'wholesale_price' => $request->wholesale_price,

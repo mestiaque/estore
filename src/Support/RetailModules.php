@@ -2,36 +2,124 @@
 
 namespace ME\Retail\Support;
 
+use Illuminate\Support\Str;
+use ME\Models\Setting;
+
 /**
- * Whether the optional Discount, Loyalty, and EMI modules are switched on for
- * this business — read from Metheme's `settings` table (master-configurable
- * via retail.settings.modules) with the `retail.php` config as the fallback
- * default. Used both to gate the sidebar (RetailServiceProvider) and by the
- * settings screen itself; core services never need to check this, since
- * discount/coupon/points/EMI are already optional per-sale inputs.
+ * The on/off switchboard for every optional Retail feature (Config/features.php).
+ * Values live in Metheme's `settings` table, master-configurable from
+ * retail.settings.modules, with each feature's `default` as the fallback.
+ *
+ * A feature counts as enabled only when its own switch is on AND every feature
+ * it `requires` is enabled too. Used to gate the sidebar (RetailServiceProvider),
+ * routes (EnsureRetailFeature middleware), views (@feature Blade directive) and
+ * the services whose behaviour depends on a feature (discounts, points, membership).
  */
 class RetailModules
 {
+    /**
+     * @return array<string, array{group: string, label: string, description: string, setting: string, default: bool, requires?: string[], routes?: string[]}>
+     */
+    public static function definitions(): array
+    {
+        return config('retail_features.features', []);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function groups(): array
+    {
+        return config('retail_features.groups', []);
+    }
+
+    public static function enabled(string $feature, array $visited = []): bool
+    {
+        $definition = self::definitions()[$feature] ?? null;
+        if (!$definition || in_array($feature, $visited, true)) {
+            return false;
+        }
+
+        if (!self::switchedOn($feature)) {
+            return false;
+        }
+
+        foreach ($definition['requires'] ?? [] as $required) {
+            if (!self::enabled($required, [...$visited, $feature])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The feature's own switch, ignoring its requirements.
+     */
+    public static function switchedOn(string $feature): bool
+    {
+        $definition = self::definitions()[$feature] ?? null;
+        if (!$definition) {
+            return false;
+        }
+
+        return (bool) get_setting($definition['setting'], $definition['default'] ?? true);
+    }
+
+    public static function set(string $feature, bool $on): void
+    {
+        $definition = self::definitions()[$feature] ?? null;
+        if ($definition) {
+            Setting::set($definition['setting'], $on);
+        }
+    }
+
+    /**
+     * The feature a named route belongs to, if any (patterns like "retail.emi-banks.*").
+     */
+    public static function featureForRoute(?string $routeName): ?string
+    {
+        if (!$routeName) {
+            return null;
+        }
+
+        foreach (self::definitions() as $feature => $definition) {
+            foreach ($definition['routes'] ?? [] as $pattern) {
+                if (Str::is($pattern, $routeName)) {
+                    return $feature;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static function routeEnabled(?string $routeName): bool
+    {
+        $feature = self::featureForRoute($routeName);
+
+        return $feature === null || self::enabled($feature);
+    }
+
     public static function discountEnabled(): bool
     {
-        return (bool) get_setting('retail_enable_discount_module', config('retail.enable_discount_module', true));
+        return self::enabled('discount');
     }
 
     public static function loyaltyEnabled(): bool
     {
-        return (bool) get_setting('retail_enable_loyalty_module', config('retail.enable_loyalty_module', true));
+        return self::enabled('loyalty');
     }
 
     public static function emiEnabled(): bool
     {
-        return (bool) get_setting('retail_enable_emi_module', config('retail.enable_emi_module', true));
+        return self::enabled('emi');
     }
 
     /**
-     * Drops the EMI group and the Discount/Loyalty menu items from a sidebar
-     * array when the corresponding module is switched off. Guarded — the
-     * `settings` table may not exist yet (e.g. mid-`migrate`), in which case
-     * every module is treated as enabled and the array is returned untouched.
+     * Drops every sidebar item whose route belongs to a switched-off feature, and
+     * any group left with no items. Guarded — the `settings` table may not exist
+     * yet (e.g. mid-`migrate`), in which case the array is returned untouched.
      *
      * @param array<int, array<string, mixed>> $groups
      * @return array<int, array<string, mixed>>
@@ -39,48 +127,23 @@ class RetailModules
     public static function filterSidebar(array $groups): array
     {
         try {
-            $discountEnabled = self::discountEnabled();
-            $loyaltyEnabled  = self::loyaltyEnabled();
-            $emiEnabled      = self::emiEnabled();
+            $groups = array_map(function (array $group) {
+                if (isset($group['children'])) {
+                    $group['children'] = array_values(array_filter(
+                        $group['children'],
+                        fn (array $child) => self::routeEnabled($child['route'] ?? null)
+                    ));
+                }
+
+                return $group;
+            }, $groups);
         } catch (\Throwable) {
             return $groups;
         }
 
-        if ($discountEnabled && $loyaltyEnabled && $emiEnabled) {
-            return $groups;
-        }
-
-        $loyaltyRoutes = [
-            'retail.customer-levels.index',
-            'retail.loyalty.adjust.create',
-            'retail.settings.loyalty.edit',
-        ];
-
-        $groups = array_filter($groups, fn (array $group) => $emiEnabled || ($group['title'] ?? null) !== 'EMI');
-
-        foreach ($groups as &$group) {
-            if (!isset($group['children'])) {
-                continue;
-            }
-
-            $group['children'] = array_values(array_filter($group['children'], function (array $child) use ($discountEnabled, $loyaltyEnabled, $emiEnabled, $loyaltyRoutes) {
-                $route = $child['route'] ?? null;
-
-                if (!$discountEnabled && $route === 'retail.discount-rules.index') {
-                    return false;
-                }
-                if (!$loyaltyEnabled && (in_array($route, $loyaltyRoutes, true) || $route === 'retail.reports.loyalty')) {
-                    return false;
-                }
-                if (!$emiEnabled && $route === 'retail.reports.emi') {
-                    return false;
-                }
-
-                return true;
-            }));
-        }
-        unset($group);
-
-        return array_values($groups);
+        return array_values(array_filter(
+            $groups,
+            fn (array $group) => !isset($group['children']) || $group['children'] !== []
+        ));
     }
 }

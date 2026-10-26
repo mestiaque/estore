@@ -6,7 +6,7 @@
 <div class="thermal-divider"></div>
 
 @foreach($sale->items as $item)
-    @php $warrantyEnds = $item->serials->pluck('warranty_end')->filter(); @endphp
+    @php $warrantyEnds = \ME\Retail\Support\RetailModules::enabled('warranty') ? $item->serials->pluck('warranty_end')->filter() : collect(); @endphp
     <div class="thermal-item">
         <div>{{ $item->product->name ?? __('N/A') }}</div>
         <div class="thermal-line">

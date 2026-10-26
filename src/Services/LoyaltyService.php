@@ -8,6 +8,8 @@ use ME\Retail\Enums\LoyaltyTransactionType;
 use ME\Retail\Models\Customer;
 use ME\Retail\Models\CustomerLevel;
 use ME\Retail\Models\LoyaltyTransaction;
+use ME\Retail\Support\RetailModules;
+use ME\Retail\Support\RetailSettings;
 
 /**
  * The single authorized way loyalty points are ever mutated. Point balance is
@@ -24,7 +26,7 @@ class LoyaltyService
     {
         $multiplier = 1.0;
 
-        if ($customer->hasActiveMembership() && $customer->membership) {
+        if (RetailModules::enabled('membership') && $customer->hasActiveMembership() && $customer->membership) {
             $multiplier *= (float) $customer->membership->point_multiplier;
         }
 
@@ -66,7 +68,7 @@ class LoyaltyService
 
         return [
             'transaction' => $transaction,
-            'discount'    => $points * (float) get_setting('retail_loyalty_point_value', config('retail.loyalty_point_value', 0.1)),
+            'discount'    => $points * (float) RetailSettings::get('loyalty_point_value'),
         ];
     }
 

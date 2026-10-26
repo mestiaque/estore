@@ -38,6 +38,7 @@ use ME\Retail\Models\StockTransfer;
 use ME\Retail\Models\Supplier;
 use ME\Retail\Models\Unit;
 use ME\Retail\Models\Warehouse;
+use ME\Retail\Support\RetailSettings;
 
 /**
  * Report architecture (plan §45): every report is a query built here, never
@@ -192,7 +193,7 @@ class ReportService
         return Product::with(['category', 'unit'])
             ->where('status', true)
             ->where('stock_quantity', '>', 0)
-            ->where('stock_quantity', '<=', config('retail.low_stock_threshold', 10))
+            ->where('stock_quantity', '<=', RetailSettings::get('low_stock_threshold'))
             ->orderBy('stock_quantity')
             ->get();
     }
@@ -207,7 +208,7 @@ class ReportService
 
     public function expiringBatches(?int $days = null)
     {
-        $days = $days ?? config('retail.expiry_warning_days', 30);
+        $days = $days ?? RetailSettings::get('expiry_warning_days');
 
         return Batch::with(['product', 'warehouse'])
             ->where('quantity', '>', 0)

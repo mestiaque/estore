@@ -22,14 +22,20 @@ class RetailController extends Controller
 
         $today = now()->toDateString();
 
-        $todaysSales    = Sale::whereDate('sale_date', $today)->sum('grand_total');
+        $todaysSales     = Sale::whereDate('sale_date', $today)->sum('grand_total');
+        $todaysSaleCount = Sale::whereDate('sale_date', $today)->count();
+        $yesterdaysSales = (float) Sale::whereDate('sale_date', now()->subDay()->toDateString())->sum('grand_total');
         $todaysPurchase = Purchase::whereDate('purchase_date', $today)->sum('grand_total');
         $todaysProfit   = $reportService->profitReport($today, $today)['net_profit'];
         // Single aggregate per side rather than looping every customer/supplier's due_balance accessor (avoids N+1).
         $customerDue = (float) Customer::sum('opening_balance') + (float) DB::table('retail_customer_transactions')->sum('amount');
         $supplierDue = (float) Supplier::sum('opening_balance') + (float) DB::table('retail_supplier_transactions')->sum('amount');
-        $lowStockCount  = $reportService->lowStockProducts()->count();
-        $expiringCount  = $reportService->expiringBatches()->count();
+        $lowStockProducts = $reportService->lowStockProducts();
+        $lowStockCount    = $lowStockProducts->count();
+        $outOfStockCount  = $reportService->outOfStockProducts()->count();
+        $expiringBatches  = $reportService->expiringBatches();
+        $expiringCount    = $expiringBatches->count();
+        $recentSales      = Sale::with('customer')->latest()->limit(6)->get();
         $cashPosition   = $reportService->currentCashPosition();
         $emiSummary      = $reportService->emiSummary();
         $emiOverdueCount = $emiSummary['overdue_installments'];
@@ -84,6 +90,7 @@ class RetailController extends Controller
 
         return view('retail::dashboard', compact(
             'storeCount', 'productCount', 'todaysSales', 'todaysPurchase', 'todaysProfit',
+            'todaysSaleCount', 'yesterdaysSales', 'outOfStockCount', 'recentSales', 'lowStockProducts', 'expiringBatches',
             'customerDue', 'supplierDue', 'lowStockCount', 'expiringCount',
             'cashPosition', 'topProducts', 'topCustomers', 'emiOverdueCount', 'emiSummary',
             'trendLabels', 'trendSales', 'trendPurchase',

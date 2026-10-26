@@ -64,6 +64,7 @@ class PurchaseController extends Controller
             'items.*.discount'         => 'nullable|numeric|min:0',
             'items.*.tax'              => 'nullable|numeric|min:0',
             'items.*.batch_number'    => 'nullable|string|max:100',
+            'items.*.batch_barcode'   => 'nullable|string|max:100',
             'items.*.expiry_date'     => 'nullable|date',
             'items.*.serial_numbers'  => 'nullable|array',
             'items.*.serial_numbers.*' => 'nullable|string|max:255',

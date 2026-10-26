@@ -10,4 +10,9 @@ class DuplicateBarcodeException extends Exception
     {
         return new self("Barcode \"{$barcode}\" is already assigned to another product.");
     }
+
+    public static function forBatchCode(string $barcode): self
+    {
+        return new self("Barcode \"{$barcode}\" is already used by a product or by another batch.");
+    }
 }

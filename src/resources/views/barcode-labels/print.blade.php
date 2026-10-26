@@ -19,6 +19,7 @@
         text-align: center;
     }
     .label .name { font-size: 8px; font-weight: bold; line-height: 1.1; max-height: 2.2em; overflow: hidden; }
+    .label .meta { font-size: 7px; line-height: 1.1; }
     .label .price { font-size: 9px; font-weight: bold; }
     .label svg { width: 90%; height: auto; }
     @media print {
@@ -29,11 +30,14 @@
 
 @section('contents')
 <div class="sheet">
-    @foreach($labels as $index => $product)
+    @foreach($labels as $label)
         <div class="label">
-            <div class="name">{{ $product->name }}</div>
-            <svg class="barcode" data-code="{{ $product->barcode ?? $product->sku }}"></svg>
-            <div class="price">{{ number_format($product->sale_price, 2) }}</div>
+            <div class="name">{{ $label['name'] }}</div>
+            @if($label['meta'])
+                <div class="meta">{{ $label['meta'] }}</div>
+            @endif
+            <svg class="barcode" data-code="{{ $label['code'] }}"></svg>
+            <div class="price">{{ number_format($label['price'], 2) }}</div>
         </div>
     @endforeach
 </div>

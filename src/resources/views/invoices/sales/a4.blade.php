@@ -45,7 +45,7 @@
                         <br><small>@lang('Batch'): {{ $item->batch->batch_number }}</small>
                     @elseif($item->serials->isNotEmpty())
                         <br><small>@lang('SN'): {{ $item->serials->pluck('serial_number')->implode(', ') }}</small>
-                        @php $warrantyEnds = $item->serials->pluck('warranty_end')->filter(); @endphp
+                        @php $warrantyEnds = \ME\Retail\Support\RetailModules::enabled('warranty') ? $item->serials->pluck('warranty_end')->filter() : collect(); @endphp
                         @if($warrantyEnds->isNotEmpty())
                             <br><small>@lang('Warranty until'): {{ $warrantyEnds->map(fn($d) => $d->format('d M Y'))->implode(', ') }}</small>
                         @endif

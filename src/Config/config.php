@@ -11,12 +11,8 @@ return [
     'loyalty_point_value' => 0.1,
     'loyalty_max_redeem_percent' => 50,
 
-    // Optional modules — a business that doesn't run EMI, discounts, or a loyalty
-    // points program can switch the corresponding menu/section off entirely
-    // (see settings/modules.blade.php). Defaults on so existing behavior is unchanged.
-    'enable_discount_module' => true,
-    'enable_loyalty_module'  => true,
-    'enable_emi_module'      => true,
+    // Optional features (barcode, EMI, membership, warranty, …) are switched on/off from
+    // retail.settings.modules — their definitions and defaults live in Config/features.php.
 
     // Invoice printing (plan §40-42): supported render types and the one used
     // when a sale's print button isn't given an explicit type.
@@ -31,6 +27,22 @@ return [
     // Replaceable — BarcodeService is the only place this format is read.
     'barcode_prefix' => 'STORE',
     'barcode_number_length' => 6,
+
+    // Batch (lot) barcodes: {batch prefix}-{zero-padded batch id}, e.g. LOT-000001. Whether
+    // they are auto-generated is the `auto_batch_barcode` feature (Config/features.php).
+    'batch_barcode_prefix' => 'LOT',
+
+    // Weighing-scale barcodes (EAN-13 in-store range): {prefix}{item code}{value}{check digit},
+    // e.g. 21 00123 01250 C. The item code is the product's PLU code. `value_type` says what the
+    // value is: "weight" in grams (product sold per kg) or "price" in the smallest currency unit
+    // (poisha). Switched on/off as the `weighed_barcode` feature; `value_type` and `prefixes`
+    // are overridable from retail.settings.modules.
+    'weighed_barcode' => [
+        'prefixes'         => ['20', '21', '22', '23', '24', '25', '26', '27', '28', '29'],
+        'item_code_length' => 5,
+        'value_length'     => 5,
+        'value_type'       => 'weight',
+    ],
 
     // Printable label sizes (plan §10). "custom" lets the user type mm dimensions on the label form.
     'label_sizes' => [

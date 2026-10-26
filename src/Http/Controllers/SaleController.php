@@ -9,14 +9,19 @@ use ME\Retail\Enums\CashRegisterSessionStatus;
 use ME\Retail\Enums\SerialStatus;
 use ME\Retail\Models\Batch;
 use ME\Retail\Models\CashRegisterSession;
+use ME\Retail\Models\Category;
 use ME\Retail\Models\Customer;
+use ME\Retail\Models\HeldSale;
 use ME\Retail\Models\Product;
+use ME\Retail\Models\ProductStock;
 use ME\Retail\Models\Sale;
 use ME\Retail\Models\Serial;
 use ME\Retail\Models\Store;
 use ME\Retail\Models\Unit;
 use ME\Retail\Models\Warehouse;
 use ME\Retail\Services\SaleService;
+use ME\Retail\Support\RetailModules;
+use ME\Retail\Support\RetailSettings;
 
 class SaleController extends Controller
 {
@@ -32,19 +37,31 @@ class SaleController extends Controller
         return view('retail::sales.index', compact('sales'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $customers  = Customer::where('status', true)->get();
+        $customers  = Customer::with(['membership', 'level'])->where('status', true)->orderBy('name')->get();
         $stores     = Store::where('status', true)->get();
         $warehouses = Warehouse::where('status', true)->get();
+        $categories = Category::where('status', true)->orderBy('name')->get(['id', 'name']);
         // Excludes template products that have generated variants — only the variants themselves are sellable.
-        $products   = Product::with('unit')->where('status', true)->whereDoesntHave('variants')->get();
+        $products   = Product::with('unit')->where('status', true)->whereDoesntHave('variants')->orderBy('name')->get();
         $units      = Unit::where('status', true)->get();
         $batches    = Batch::where('status', true)->where('quantity', '>', 0)->get();
         $serials    = Serial::where('status', SerialStatus::Available)->get();
-        $openSessions = CashRegisterSession::with('cashRegister')->where('status', CashRegisterSessionStatus::Open)->get();
+        // Per-warehouse on-hand quantity, shown on the POS product tiles.
+        $stocks     = ProductStock::query()->where('quantity', '!=', 0)->get(['product_id', 'warehouse_id', 'quantity']);
+        $openSessions = RetailModules::enabled('cash_register')
+            ? CashRegisterSession::with('cashRegister')->where('status', CashRegisterSessionStatus::Open)->get()
+            : collect();
+        $heldSales    = RetailModules::enabled('hold_sale') ? HeldSale::with(['customer', 'user'])->latest()->get() : collect();
+        // ?resume={id} reopens a held cart in this form; it is deleted once the sale completes.
+        $resumedSale  = RetailModules::enabled('hold_sale') && $request->filled('resume') ? HeldSale::find($request->integer('resume')) : null;
+        $pointValue   = (float) RetailSettings::get('loyalty_point_value');
 
-        return view('retail::sales.create', compact('customers', 'stores', 'warehouses', 'products', 'units', 'batches', 'serials', 'openSessions'));
+        return view('retail::sales.create', compact(
+            'customers', 'stores', 'warehouses', 'categories', 'products', 'units', 'batches', 'serials', 'stocks',
+            'openSessions', 'heldSales', 'resumedSale', 'pointValue'
+        ));
     }
 
     public function store(Request $request)
@@ -74,15 +91,19 @@ class SaleController extends Controller
             'payments.*.payment_method' => 'required_with:payments|string|max:50',
             'payments.*.amount'        => 'required_with:payments|numeric|min:0.01',
             'payments.*.reference'     => 'nullable|string|max:255',
+            'held_sale_id'             => 'nullable|integer',
         ]);
 
         DB::beginTransaction();
         try {
             $sale = $this->saleService->create($request->all(), auth()->id());
+            if ($request->filled('held_sale_id')) {
+                HeldSale::whereKey($request->integer('held_sale_id'))->delete();
+            }
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            return redirect()->route('retail.sales.create')->with('error', $e->getMessage() ?: __('Failed to create sale'));
+            return redirect()->route('retail.sales.create', array_filter(['resume' => $request->held_sale_id]))->with('error', $e->getMessage() ?: __('Failed to create sale'));
         }
 
         return redirect()->route('retail.sales.show', $sale->id)->with('success', __('Sale completed successfully'));

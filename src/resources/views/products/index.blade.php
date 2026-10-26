@@ -3,6 +3,7 @@
 @section('title', trans('Products'))
 
 @push('buttons')
+  @feature('barcode')
   @can('retail_barcode.print')
   @component('me::components.btn.add-button', [
       'route' => route('retail.barcode-labels.form'),
@@ -19,6 +20,7 @@
       </button>
   </form>
   @endcan
+  @endfeature
   @can('retail_product.create')
   @component('me::components.btn.add-button', [
       'route' => route('retail.products.create'),
@@ -38,7 +40,7 @@
                     <th>#</th>
                     <th>@lang('Name')</th>
                     <th>@lang('SKU')</th>
-                    <th>@lang('Barcode')</th>
+                    @feature('barcode')<th>@lang('Barcode')</th>@endfeature
                     <th>@lang('Category')</th>
                     <th>@lang('Brand')</th>
                     <th>@lang('Unit')</th>
@@ -54,6 +56,7 @@
                         <td>{{ $loop->iteration }}</td>
                         <td>{{ $product->name }}</td>
                         <td>{{ $product->sku }}</td>
+                        @feature('barcode')
                         <td>
                             @if($product->barcode)
                                 {{ $product->barcode }}
@@ -69,6 +72,7 @@
                                 @endcan
                             @endif
                         </td>
+                        @endfeature
                         <td>{{ $product->category->name ?? __('N/A') }}</td>
                         <td>{{ $product->brand->name ?? __('N/A') }}</td>
                         <td>{{ $product->unit->short_name ?? __('N/A') }}</td>

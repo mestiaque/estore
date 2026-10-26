@@ -10,6 +10,7 @@
       'attribute' => 'target="_blank"'
   ])
   @endcomponent
+  @feature('purchase_return')
   @can('retail_purchase.return')
   @component('me::components.btn.add-button', [
       'route' => route('retail.purchases.returns.create', $purchase->id),
@@ -18,6 +19,7 @@
   ])
   @endcomponent
   @endcan
+  @endfeature
 @endpush
 
 @section('content')
@@ -61,10 +63,13 @@
                                 @if($item->batch->expiry_date)
                                     <br><small class="text-muted">@lang('Exp'): {{ $item->batch->expiry_date->format('d M Y') }}</small>
                                 @endif
+                                @if($item->batch->barcode && \ME\Retail\Support\RetailModules::enabled('barcode'))
+                                    <br><small class="text-muted"><i class="fas fa-barcode"></i> {{ $item->batch->barcode }}</small>
+                                @endif
                             @elseif($item->serials->isNotEmpty())
                                 @foreach($item->serials as $serial)
                                     <span class="badge bg-secondary">{{ $serial->serial_number }}</span>
-                                    @if($serial->warranty_end)
+                                    @if($serial->warranty_end && \ME\Retail\Support\RetailModules::enabled('warranty'))
                                         <br><small class="text-muted">@lang('Warranty'): {{ $serial->warranty_months }} @lang('months') ({{ __('until') }} {{ $serial->warranty_end->format('d M Y') }})</small>
                                     @endif
                                 @endforeach

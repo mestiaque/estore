@@ -3,6 +3,7 @@
 namespace ME\Retail\Services;
 
 use InvalidArgumentException;
+use ME\Retail\Support\RetailSettings;
 
 /**
  * Keeps invoice rendering decoupled from Sale/Purchase business logic (plan §42):
@@ -13,7 +14,7 @@ class InvoiceService
 {
     public function saleInvoiceView(string $type): string
     {
-        if (!in_array($type, config('retail.invoice_types', ['a4', 'thermal80', 'thermal58']), true)) {
+        if (!in_array($type, (RetailSettings::get('invoice_types') ?: ['a4']), true)) {
             throw new InvalidArgumentException("Unknown invoice type \"{$type}\".");
         }
 
@@ -22,6 +23,6 @@ class InvoiceService
 
     public function defaultSaleInvoiceType(): string
     {
-        return config('retail.default_invoice_type', 'a4');
+        return RetailSettings::get('default_invoice_type');
     }
 }

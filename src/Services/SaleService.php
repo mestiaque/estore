@@ -17,6 +17,8 @@ use ME\Retail\Models\SaleItem;
 use ME\Retail\Models\SalePayment;
 use ME\Retail\Models\Unit;
 use ME\Retail\Models\Warehouse;
+use ME\Retail\Support\RetailModules;
+use ME\Retail\Support\RetailSettings;
 
 /**
  * Orchestrates the POS/Sale flow: Customer -> Product -> Pricing -> Payment ->
@@ -119,8 +121,8 @@ class SaleService
                 ];
             }
 
-            // Points are only earned by identified customers, never on a walk-in sale.
-            $pointMultiplier = $customer ? $this->loyaltyService->multiplierFor($customer) : 0.0;
+            // Points are only earned by identified customers, never on a walk-in sale, and only while loyalty is on.
+            $pointMultiplier = $customer && RetailModules::loyaltyEnabled() ? $this->loyaltyService->multiplierFor($customer) : 0.0;
             foreach ($itemRows as &$row) {
                 $row['points_earned'] = (float) $row['product']->earn_points * $row['quantity_base'] * $pointMultiplier;
             }
@@ -141,12 +143,16 @@ class SaleService
             $pointsDiscount = 0.0;
 
             if ($redeemPoints > 0) {
+                if (!RetailModules::loyaltyEnabled()) {
+                    throw new InvalidArgumentException('Loyalty points are turned off in Retail settings.');
+                }
+
                 if (!$customer) {
                     throw new InvalidArgumentException('Points can only be redeemed by a registered customer.');
                 }
 
-                $pointsDiscount = $redeemPoints * (float) get_setting('retail_loyalty_point_value', config('retail.loyalty_point_value', 0.1));
-                $maxRedeemable  = $preRedeemTotal * ((float) get_setting('retail_loyalty_max_redeem_percent', config('retail.loyalty_max_redeem_percent', 50)) / 100);
+                $pointsDiscount = $redeemPoints * (float) RetailSettings::get('loyalty_point_value');
+                $maxRedeemable  = $preRedeemTotal * ((float) RetailSettings::get('loyalty_max_redeem_percent') / 100);
 
                 if ($pointsDiscount > $maxRedeemable + 0.0001) {
                     throw new InvalidArgumentException("Points redemption cannot exceed {$maxRedeemable} on this invoice.");

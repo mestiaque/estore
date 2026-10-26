@@ -19,6 +19,7 @@ class Product extends Model
         'name',
         'sku',
         'barcode',
+        'plu_code',
         'purchase_price',
         'sale_price',
         'wholesale_price',

@@ -23,7 +23,12 @@ class InvoiceController extends Controller
             'payments',
         ]);
 
-        $view = $this->invoiceService->saleInvoiceView($type ?: $this->invoiceService->defaultSaleInvoiceType());
+        try {
+            $view = $this->invoiceService->saleInvoiceView($type ?: $this->invoiceService->defaultSaleInvoiceType());
+        } catch (\InvalidArgumentException) {
+            // An unknown format, or one switched off in Retail Settings.
+            abort(404);
+        }
 
         return view($view, [
             'sale'       => $sale,

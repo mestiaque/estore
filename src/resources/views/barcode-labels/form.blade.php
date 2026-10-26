@@ -55,6 +55,43 @@
                 </table>
             </div>
 
+            @if($batches->isNotEmpty())
+            <h6 class="mt-3">@lang('Batch / Lot Labels')</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-encodex">
+                    <thead class="text-center">
+                        <tr>
+                            <th></th>
+                            <th>@lang('Product')</th>
+                            <th>@lang('Batch')</th>
+                            <th>@lang('Expiry')</th>
+                            <th>@lang('Warehouse')</th>
+                            <th>@lang('Barcode')</th>
+                            <th style="width:120px">@lang('Quantity')</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($batches as $index => $batch)
+                            <tr>
+                                <td class="text-center">
+                                    <input type="checkbox" class="product-check">
+                                </td>
+                                <td>{{ $batch->product->name ?? '' }}</td>
+                                <td>{{ $batch->batch_number }}</td>
+                                <td>{{ $batch->expiry_date?->format('d/m/Y') ?? '-' }}</td>
+                                <td>{{ $batch->warehouse->name ?? '' }}</td>
+                                <td>{{ $batch->barcode ?: __('N/A (uses product barcode)') }}</td>
+                                <td>
+                                    <input type="hidden" name="batches[{{ $index }}][id]" value="{{ $batch->id }}" disabled class="qty-id-input">
+                                    <input type="number" min="1" value="1" name="batches[{{ $index }}][quantity]" class="form-control form-control-sm qty-input" disabled>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
+
             @component('me::components.btn.save-button', ['text' => __('Print Labels')])
             @endcomponent
         </form>
